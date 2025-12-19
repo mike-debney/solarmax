@@ -1,0 +1,21 @@
+{
+    "domain": "solarmax",
+    "name": "SolarMax",
+    "country": "NZ",
+    "render_readme": true,
+    "documentation": "https://github.com/mike-debney/solarmax",
+    "issue_tracker": "https://github.com/mike-debney/solarmax/issues",
+    "dependencies": [],
+    "codeowners": [
+        "@mike-debney"
+    ],
+    "version": "0.1.0",
+    "requirements": [
+        "pvlib==0.11.1"
+    ],
+    "iot_class": "calculated",
+    "config_flow": false,
+    "loggers": [
+        "solarmax"
+    ]
+}
