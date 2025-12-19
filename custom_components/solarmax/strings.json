@@ -1,0 +1,158 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Set up SolarMax",
+                "description": "Configure your solar array estimator",
+                "data": {
+                    "name": "Name",
+                    "solar_radiation_entity": "Solar radiation sensor",
+                    "inverter_efficiency": "Inverter efficiency (%)",
+                    "inverter_capacity": "Inverter capacity (W)"
+                },
+                "data_description": {
+                    "name": "A friendly name for this integration",
+                    "solar_radiation_entity": "Select the sensor that provides solar radiation data (in W/m²)",
+                    "inverter_efficiency": "System and inverter efficiency accounting for losses (1-100%, typical 96%)",
+                    "inverter_capacity": "Maximum power output of your inverter in watts (e.g., 5000W). Power will be clipped at this value."
+                }
+            },
+            "array": {
+                "title": "Configure solar array",
+                "description": "Configure a solar panel array for {radiation_entity}",
+                "data": {
+                    "array_name": "Array name",
+                    "panel_wattage": "Panel wattage (W)",
+                    "panel_count": "Number of panels",
+                    "panel_azimuth": "Panel azimuth (degrees)",
+                    "panel_tilt": "Panel tilt angle (degrees)"
+                },
+                "data_description": {
+                    "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
+                    "panel_wattage": "Rated power of each panel (e.g., 400W)",
+                    "panel_count": "Total number of panels in this array",
+                    "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                }
+            },
+            "add_another": {
+                "title": "Add another array?",
+                "description": "You have configured {array_count} array(s). Would you like to add another array?",
+                "data": {
+                    "add_another": "Add another array"
+                }
+            }
+        },
+        "error": {
+            "entity_not_found": "The selected entity does not exist"
+        },
+        "abort": {
+            "already_configured": "This solar radiation sensor is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configure SolarMax",
+                "description": "Choose what you want to configure",
+                "data": {
+                    "action": "Action"
+                }
+            },
+            "manage_arrays": {
+                "title": "Manage solar arrays",
+                "description": "Currently configured arrays: {array_count}",
+                "data": {
+                    "action": "Action"
+                }
+            },
+            "add_array": {
+                "title": "Add new solar array",
+                "description": "Configure a new solar panel array",
+                "data": {
+                    "array_name": "Array name",
+                    "panel_wattage": "Panel wattage (W)",
+                    "panel_count": "Number of panels",
+                    "panel_azimuth": "Panel azimuth (degrees)",
+                    "panel_tilt": "Panel tilt angle (degrees)"
+                },
+                "data_description": {
+                    "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
+                    "panel_wattage": "Rated power of each panel (e.g., 400W)",
+                    "panel_count": "Total number of panels in this array",
+                    "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                }
+            },
+            "select_array_to_edit": {
+                "title": "Select array to edit",
+                "description": "Choose which array you want to edit",
+                "data": {
+                    "array_index": "Array to edit"
+                }
+            },
+            "edit_array": {
+                "title": "Edit solar array",
+                "description": "Update the configuration for this array",
+                "data": {
+                    "array_name": "Array name",
+                    "panel_wattage": "Panel wattage (W)",
+                    "panel_count": "Number of panels",
+                    "panel_azimuth": "Panel azimuth (degrees)",
+                    "panel_tilt": "Panel tilt angle (degrees)"
+                },
+                "data_description": {
+                    "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
+                    "panel_wattage": "Rated power of each panel (e.g., 400W)",
+                    "panel_count": "Total number of panels in this array",
+                    "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                }
+            },
+            "select_array_to_delete": {
+                "title": "Select array to delete",
+                "description": "Choose which array you want to delete",
+                "data": {
+                    "array_index": "Array to delete"
+                }
+            },
+            "edit_inverter": {
+                "title": "Edit inverter settings",
+                "description": "Update inverter efficiency and capacity",
+                "data": {
+                    "inverter_efficiency": "Inverter efficiency (%)",
+                    "inverter_capacity": "Inverter capacity (W)"
+                },
+                "data_description": {
+                    "inverter_efficiency": "System and inverter efficiency accounting for losses (1-100%, typical 96%)",
+                    "inverter_capacity": "Maximum power output of your inverter in watts (e.g., 5000W). Power will be clipped at this value."
+                }
+            },
+            "edit_sensor": {
+                "title": "Change solar radiation sensor",
+                "description": "Select a different solar radiation sensor",
+                "data": {
+                    "solar_radiation_entity": "Solar radiation sensor"
+                },
+                "data_description": {
+                    "solar_radiation_entity": "Select the sensor that provides solar radiation data (in W/m²)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "total_solar_output": {
+                "name": "Total estimated solar output"
+            },
+            "array_solar_output": {
+                "name": "{array_name}"
+            }
+        },
+        "number": {
+            "solar_radiation_manual": {
+                "name": "Solar radiation (manual)"
+            }
+        }
+    }
+}

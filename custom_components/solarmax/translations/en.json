@@ -1,0 +1,68 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up SolarMax",
+        "description": "Configure your solar array estimator",
+        "data": {
+          "name": "Name",
+          "solar_radiation_entity": "Solar radiation sensor"
+        },
+        "data_description": {
+          "name": "A friendly name for this integration",
+          "solar_radiation_entity": "Select the sensor that provides solar radiation data (in W/m²)"
+        }
+      },
+      "panel_config": {
+        "title": "Solar panel configuration",
+        "description": "Configure your solar panel array details for {radiation_entity}",
+        "data": {
+          "panel_wattage": "Panel wattage (W)",
+          "panel_area": "Panel area (m²)",
+          "panel_count": "Number of panels",
+          "panel_direction": "Panel direction (degrees)",
+          "panel_tilt": "Panel tilt angle (degrees)",
+          "efficiency": "System efficiency"
+        },
+        "data_description": {
+          "panel_wattage": "Rated power of each panel (e.g., 400W)",
+          "panel_area": "Area of each panel in square meters (e.g., 2.0)",
+          "panel_count": "Total number of panels in the array",
+          "panel_direction": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
+          "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)",
+          "efficiency": "Overall system efficiency factor (0.01-1.0, typical 0.85)"
+        }
+      }
+    },
+    "error": {
+      "entity_not_found": "The selected entity does not exist"
+    },
+    "abort": {
+      "already_configured": "This solar radiation sensor is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update solar panel configuration",
+        "description": "Adjust your solar panel array settings",
+        "data": {
+          "panel_wattage": "Panel wattage (W)",
+          "panel_area": "Panel area (m²)",
+          "panel_count": "Number of panels",
+          "panel_direction": "Panel direction (degrees)",
+          "panel_tilt": "Panel tilt angle (degrees)",
+          "efficiency": "System efficiency"
+        },
+        "data_description": {
+          "panel_wattage": "Rated power of each panel (e.g., 400W)",
+          "panel_area": "Area of each panel in square meters (e.g., 2.0)",
+          "panel_count": "Total number of panels in the array",
+          "panel_direction": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
+          "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)",
+          "efficiency": "Overall system efficiency factor (0.01-1.0, typical 0.85)"
+        }
+      }
+    }
+  }
+}

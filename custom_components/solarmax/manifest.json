@@ -1,0 +1,13 @@
+{
+    "domain": "solarmax",
+    "name": "SolarMax",
+    "codeowners": [],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://github.com/home-assistant/core",
+    "iot_class": "calculated",
+    "requirements": [
+        "pvlib==0.11.1"
+    ],
+    "version": "2.0.0"
+}
