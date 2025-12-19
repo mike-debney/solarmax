@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
+
+import pvlib
+from pvlib.location import Location
 from zoneinfo import ZoneInfo
 
 from homeassistant.core import HomeAssistant
@@ -52,12 +55,14 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
         self._location: Any | None = None
 
     @property
-    def location(self) -> Any:
-        """Get pvlib Location object (lazy loaded)."""
+    def location(self) -> Location:
+        """Get or create pvlib Location object."""
         if self._location is None:
-            from pvlib.location import Location  # noqa: PLC0415
-
-            self._location = Location(latitude=self.latitude, longitude=self.longitude)
+            self._location = Location(
+                latitude=self.latitude,
+                longitude=self.longitude,
+                tz=self.hass.config.time_zone,
+            )
         return self._location
 
     async def _async_update_data(self) -> dict[str, float]:
@@ -83,13 +88,10 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
         # Calculate power output for each array
         results: dict[str, float] = {}
         total_power = 0.0
-
         for array in self.arrays:
             power = await self.hass.async_add_executor_job(
                 self._calculate_array_power, array, solar_radiation
             )
-            # Clip individual array power to inverter capacity
-            power = min(power, self.inverter_capacity)
             results[array.name] = power
             total_power += power
 
@@ -102,11 +104,11 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
     def _calculate_array_power(
         self, array: ArrayConfig, solar_radiation: float
     ) -> float:
-        """Calculate power output for a single array using pvlib.
+        """Calculate power output for a single array using pvlib GHI-to-POA conversion.
 
         Args:
             array: The array configuration
-            solar_radiation: Solar radiation in W/m²
+            solar_radiation: Solar radiation in W/m² (GHI from weather station)
 
         Returns:
             Estimated power output in watts
@@ -115,48 +117,72 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
             return 0.0
 
         try:
-            # Lazy import pvlib to avoid blocking event loop at module load
-            import pvlib  # noqa: PLC0415
-
-            # Get current time in UTC
-            now = datetime.now(tz=ZoneInfo("UTC"))
-
-            # Calculate solar position
+            # Get current solar position
+            now = datetime.now(tz=ZoneInfo(self.hass.config.time_zone))
             solar_position = self.location.get_solarposition(now)
+            # pvlib returns pandas Series, extract scalar values
+            solar_zenith = float(solar_position["zenith"].iloc[0])  # type: ignore[union-attr]
+            solar_azimuth = float(solar_position["azimuth"].iloc[0])  # type: ignore[union-attr]
 
-            # Calculate the angle of incidence
+            # Calculate angle of incidence
             aoi = pvlib.irradiance.aoi(
                 surface_tilt=array.tilt,
                 surface_azimuth=array.azimuth,
-                solar_zenith=solar_position["apparent_zenith"].iloc[0],
-                solar_azimuth=solar_position["azimuth"].iloc[0],
+                solar_zenith=solar_zenith,
+                solar_azimuth=solar_azimuth,
             )
 
-            # Calculate effective irradiance accounting for angle of incidence
-            # This uses the cosine of the angle of incidence to adjust the measured radiation
-            effective_irradiance = solar_radiation * max(0, pvlib.tools.cosd(aoi))
+            # Estimate DNI and DHI from GHI (simplified decomposition)
+            # For better accuracy, use actual DNI/DHI sensors if available
+            # This uses Erbs model approximation
+            cos_zenith = max(0, pvlib.tools.cosd(solar_zenith))
+            if cos_zenith > 0.01:  # Sun is above horizon
+                # Rough estimate: DNI = GHI * cos(zenith), DHI = 15% of GHI
+                # This is a simplification; proper models use clearness index
+                dni = solar_radiation * cos_zenith
+                dhi = solar_radiation * 0.15
+            else:
+                dni = 0.0
+                dhi = solar_radiation
 
-            # Debug logging
-            _LOGGER.debug(
-                "Array %s: radiation=%.2f, aoi=%.2f, effective=%.2f, zenith=%.2f, efficiency=%.2f",
-                array.name,
-                solar_radiation,
-                aoi,
-                effective_irradiance,
-                solar_position["apparent_zenith"].iloc[0],
-                self.inverter_efficiency,
+            # Convert GHI to POA using isotropic sky model
+            poa_irradiance = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=array.tilt,
+                surface_azimuth=array.azimuth,
+                solar_zenith=solar_zenith,
+                solar_azimuth=solar_azimuth,
+                dni=dni,
+                ghi=solar_radiation,
+                dhi=dhi,
+                model="isotropic",
             )
+            # Extract scalar value from Series
+            poa_series = poa_irradiance["poa_global"]
+            poa_global = (
+                float(poa_series.iloc[0])
+                if hasattr(poa_series, "iloc")
+                else float(poa_series)
+            )  # type: ignore[arg-type]
 
-            # Calculate power output
-            # Power = (Effective Irradiance / STC Irradiance) × Rated Power × Inverter Efficiency × Panel Count
+            # Calculate power from POA irradiance
             power = float(
-                (effective_irradiance / STC_IRRADIANCE)
+                (poa_global / STC_IRRADIANCE)
                 * array.panel_wattage
                 * self.inverter_efficiency
                 * array.panel_count
             )
 
-            _LOGGER.debug("Array %s: calculated power=%.2f W", array.name, power)
+            # Debug logging
+            _LOGGER.debug(
+                "Array %s: GHI=%.2f W/m², zenith=%.1f°, azimuth=%.1f°, AOI=%.1f°, POA=%.2f W/m², power=%.2f W",
+                array.name,
+                solar_radiation,
+                solar_zenith,
+                solar_azimuth,
+                aoi,
+                poa_global,
+                power,
+            )
 
             return max(0.0, power)
 
