@@ -24,12 +24,15 @@ from .const import (
     CONF_PANEL_TILT,
     CONF_PANEL_WATTAGE,
     CONF_SOLAR_RADIATION_ENTITY,
+    CONF_TEMPERATURE_COEFFICIENT,
+    CONF_TEMPERATURE_ENTITY,
     DEFAULT_INVERTER_CAPACITY,
     DEFAULT_INVERTER_EFFICIENCY,
     DEFAULT_PANEL_AZIMUTH,
     DEFAULT_PANEL_COUNT,
     DEFAULT_PANEL_TILT,
     DEFAULT_PANEL_WATTAGE,
+    DEFAULT_TEMPERATURE_COEFFICIENT,
     DOMAIN,
 )
 
@@ -76,6 +79,19 @@ def get_array_schema(array_data: dict[str, Any] | None = None) -> vol.Schema:
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
                     min=0, max=90, mode=selector.NumberSelectorMode.BOX
+                )
+            ),
+            vol.Required(
+                CONF_TEMPERATURE_COEFFICIENT,
+                default=array_data.get(
+                    CONF_TEMPERATURE_COEFFICIENT, DEFAULT_TEMPERATURE_COEFFICIENT
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=-1.0,
+                    max=0.0,
+                    step=0.01,
+                    mode=selector.NumberSelectorMode.BOX,
                 )
             ),
         }
@@ -154,9 +170,18 @@ class SolarMaxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle configuring a solar array."""
         if user_input is not None:
+            # Ensure temperature_coefficient has a value
+            if CONF_TEMPERATURE_COEFFICIENT not in user_input:
+                user_input[CONF_TEMPERATURE_COEFFICIENT] = (
+                    DEFAULT_TEMPERATURE_COEFFICIENT
+                )
+
             if self._array_index is not None:
-                # Editing existing array
-                self._arrays[self._array_index] = user_input
+                # Editing existing array - merge to preserve all fields
+                self._arrays[self._array_index] = {
+                    **self._arrays[self._array_index],
+                    **user_input,
+                }
                 self._array_index = None
             else:
                 # Adding new array
@@ -242,6 +267,8 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
                 return await self.async_step_edit_inverter()
             if action == "sensor":
                 return await self.async_step_edit_sensor()
+            if action == "temperature":
+                return await self.async_step_edit_temperature()
 
         return self.async_show_form(
             step_id="init",
@@ -252,6 +279,7 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
                             "arrays": "Manage solar arrays",
                             "inverter": "Edit inverter settings",
                             "sensor": "Change solar radiation sensor",
+                            "temperature": "Configure temperature sensor",
                         }
                     ),
                 }
@@ -278,10 +306,14 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
                     self.hass.config_entries.async_update_entry(
                         self.config_entry, data=new_data
                     )
+                    await self.hass.config_entries.async_reload(
+                        self.config_entry.entry_id
+                    )
                 return await self.async_step_init()
 
-        # Initialize arrays from config entry
-        self._arrays = list(self.config_entry.data.get(CONF_ARRAYS, []))
+        # Initialize arrays from config entry only if not already loaded
+        if not self._arrays:
+            self._arrays = list(self.config_entry.data.get(CONF_ARRAYS, []))
 
         return self.async_show_form(
             step_id="manage_arrays",
@@ -305,6 +337,11 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Add a new array."""
         if user_input is not None:
+            # Ensure temperature_coefficient has a value
+            if CONF_TEMPERATURE_COEFFICIENT not in user_input:
+                user_input[CONF_TEMPERATURE_COEFFICIENT] = (
+                    DEFAULT_TEMPERATURE_COEFFICIENT
+                )
             self._arrays.append(user_input)
             return await self.async_step_manage_arrays()
 
@@ -345,7 +382,11 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
         """Edit an existing array."""
         if user_input is not None:
             if self._array_index is not None:
-                self._arrays[self._array_index] = user_input
+                # Start with existing array data
+                updated_array = self._arrays[self._array_index].copy()
+                # Update with all fields from user_input
+                updated_array.update(user_input)
+                self._arrays[self._array_index] = updated_array
                 self._array_index = None
             return await self.async_step_manage_arrays()
 
@@ -396,6 +437,7 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=new_data
             )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
@@ -460,4 +502,34 @@ class SolarMaxOptionsFlowHandler(config_entries.OptionsFlow):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_edit_temperature(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit temperature sensor."""
+        if user_input is not None:
+            # Temperature sensor is optional, so we don't validate it exists
+            new_data = {
+                **self.config_entry.data,
+                CONF_TEMPERATURE_ENTITY: user_input.get(CONF_TEMPERATURE_ENTITY),
+            }
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_create_entry(title="", data={})
+
+        return self.async_show_form(
+            step_id="edit_temperature",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_TEMPERATURE_ENTITY,
+                        default=self.config_entry.data.get(CONF_TEMPERATURE_ENTITY),
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=["sensor", "input_number"])
+                    ),
+                }
+            ),
         )

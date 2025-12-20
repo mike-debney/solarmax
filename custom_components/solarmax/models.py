@@ -20,6 +20,7 @@ class ArrayConfig:
     panel_count: int
     azimuth: int
     tilt: int
+    temperature_coefficient: float = -0.4  # %/°C
 
     @property
     def total_capacity(self) -> int:

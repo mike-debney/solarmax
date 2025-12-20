@@ -21,6 +21,9 @@ from .const import (
     CONF_PANEL_TILT,
     CONF_PANEL_WATTAGE,
     CONF_SOLAR_RADIATION_ENTITY,
+    CONF_TEMPERATURE_COEFFICIENT,
+    CONF_TEMPERATURE_ENTITY,
+    DEFAULT_TEMPERATURE_COEFFICIENT,
 )
 from .coordinator import SolarMaxCoordinator
 from .models import ArrayConfig, SolarMaxConfigEntry, SolarMaxRuntimeData
@@ -41,6 +44,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolarMaxConfigEntry) -> 
             panel_count=array_data[CONF_PANEL_COUNT],
             azimuth=array_data[CONF_PANEL_AZIMUTH],
             tilt=array_data[CONF_PANEL_TILT],
+            temperature_coefficient=array_data.get(
+                CONF_TEMPERATURE_COEFFICIENT, DEFAULT_TEMPERATURE_COEFFICIENT
+            ),
         )
         for array_data in arrays_data
     ]
@@ -51,6 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolarMaxConfigEntry) -> 
         config_entry=entry,
         arrays=arrays,
         solar_radiation_entity=entry.data[CONF_SOLAR_RADIATION_ENTITY],
+        temperature_entity=entry.data.get(CONF_TEMPERATURE_ENTITY),
         latitude=entry.data.get(CONF_LATITUDE, hass.config.latitude),
         longitude=entry.data.get(CONF_LONGITUDE, hass.config.longitude),
         inverter_efficiency=entry.data[CONF_INVERTER_EFFICIENCY],

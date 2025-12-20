@@ -25,14 +25,16 @@
                     "panel_wattage": "Panel wattage (W)",
                     "panel_count": "Number of panels",
                     "panel_azimuth": "Panel azimuth (degrees)",
-                    "panel_tilt": "Panel tilt angle (degrees)"
+                    "panel_tilt": "Panel tilt angle (degrees)",
+                    "temperature_coefficient": "Temperature coefficient (%/°C)"
                 },
                 "data_description": {
                     "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
                     "panel_wattage": "Rated power of each panel (e.g., 400W)",
                     "panel_count": "Total number of panels in this array",
                     "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
-                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)",
+                    "temperature_coefficient": "Power loss per degree above 25°C (typically -0.4%/°C for crystalline silicon)"
                 }
             },
             "add_another": {
@@ -74,14 +76,16 @@
                     "panel_wattage": "Panel wattage (W)",
                     "panel_count": "Number of panels",
                     "panel_azimuth": "Panel azimuth (degrees)",
-                    "panel_tilt": "Panel tilt angle (degrees)"
+                    "panel_tilt": "Panel tilt angle (degrees)",
+                    "temperature_coefficient": "Temperature coefficient (%/°C)"
                 },
                 "data_description": {
                     "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
                     "panel_wattage": "Rated power of each panel (e.g., 400W)",
                     "panel_count": "Total number of panels in this array",
                     "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
-                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)",
+                    "temperature_coefficient": "Power loss per degree above 25°C (typically -0.4%/°C for crystalline silicon)"
                 }
             },
             "select_array_to_edit": {
@@ -99,14 +103,16 @@
                     "panel_wattage": "Panel wattage (W)",
                     "panel_count": "Number of panels",
                     "panel_azimuth": "Panel azimuth (degrees)",
-                    "panel_tilt": "Panel tilt angle (degrees)"
+                    "panel_tilt": "Panel tilt angle (degrees)",
+                    "temperature_coefficient": "Temperature coefficient (%/°C)"
                 },
                 "data_description": {
                     "array_name": "A name to identify this array (e.g., 'South Roof', 'East Array')",
                     "panel_wattage": "Rated power of each panel (e.g., 400W)",
                     "panel_count": "Total number of panels in this array",
                     "panel_azimuth": "Azimuth direction (0=North, 90=East, 180=South, 270=West)",
-                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)"
+                    "panel_tilt": "Tilt angle from horizontal (0=flat, 90=vertical)",
+                    "temperature_coefficient": "Power loss per degree above 25°C (typically -0.4%/°C for crystalline silicon)"
                 }
             },
             "select_array_to_delete": {
@@ -136,6 +142,16 @@
                 },
                 "data_description": {
                     "solar_radiation_entity": "Select the sensor that provides solar radiation data (in W/m²)"
+                }
+            },
+            "edit_temperature": {
+                "title": "Configure temperature sensor",
+                "description": "Optionally select an air temperature sensor for more accurate power estimates",
+                "data": {
+                    "temperature_entity": "Air temperature sensor (optional)"
+                },
+                "data_description": {
+                    "temperature_entity": "Select an air temperature sensor. Panel temperature will be estimated using the NOCT model to account for temperature-related power loss. Leave empty to use default temperature (25°C)."
                 }
             }
         }

@@ -5,15 +5,21 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo
 
 import pvlib
 from pvlib.location import Location
-from zoneinfo import ZoneInfo
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, STC_IRRADIANCE, UPDATE_INTERVAL
+from .const import (
+    DEFAULT_NOCT,
+    DOMAIN,
+    STC_IRRADIANCE,
+    STC_TEMPERATURE,
+    UPDATE_INTERVAL,
+)
 from .models import ArrayConfig
 
 if TYPE_CHECKING:
@@ -31,6 +37,7 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
         config_entry: ConfigEntry,
         arrays: list[ArrayConfig],
         solar_radiation_entity: str,
+        temperature_entity: str | None,
         latitude: float,
         longitude: float,
         inverter_efficiency: float,
@@ -45,6 +52,7 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
             config_entry=config_entry,
         )
         self.solar_radiation_entity = solar_radiation_entity
+        self.temperature_entity = temperature_entity
         self.arrays = arrays
         self.latitude = latitude
         self.longitude = longitude
@@ -85,12 +93,26 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
                 f"Invalid solar radiation value: {radiation_state.state}"
             ) from err
 
+        # Get temperature if available
+        temperature: float | None = None
+        if self.temperature_entity:
+            temp_state = self.hass.states.get(self.temperature_entity)
+            if temp_state and temp_state.state not in ("unknown", "unavailable"):
+                try:
+                    temperature = float(temp_state.state)
+                except (ValueError, TypeError):
+                    _LOGGER.warning(
+                        "Invalid temperature value from %s: %s",
+                        self.temperature_entity,
+                        temp_state.state,
+                    )
+
         # Calculate power output for each array
         results: dict[str, float] = {}
         total_power = 0.0
         for array in self.arrays:
             power = await self.hass.async_add_executor_job(
-                self._calculate_array_power, array, solar_radiation
+                self._calculate_array_power, array, solar_radiation, temperature
             )
             results[array.name] = power
             total_power += power
@@ -102,13 +124,14 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
         return results
 
     def _calculate_array_power(
-        self, array: ArrayConfig, solar_radiation: float
+        self, array: ArrayConfig, solar_radiation: float, temperature: float | None
     ) -> float:
         """Calculate power output for a single array using pvlib GHI-to-POA conversion.
 
         Args:
             array: The array configuration
             solar_radiation: Solar radiation in W/m² (GHI from weather station)
+            temperature: Panel temperature in °C (optional)
 
         Returns:
             Estimated power output in watts
@@ -172,17 +195,51 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
                 * array.panel_count
             )
 
+            # Apply temperature coefficient if temperature is available
+            temp_correction = 1.0
+            panel_temperature = None
+            if temperature is not None:
+                # Estimate panel temperature from ambient air temperature
+                # Using simplified NOCT model: T_cell = T_air + (NOCT - 20) / 800 * POA
+
+                # Panel temperature rises above ambient based on irradiance
+                # Typical panels run 20-30°C hotter than air on sunny days
+                temp_rise = ((DEFAULT_NOCT - 20) / 800) * poa_global
+                panel_temperature = temperature + temp_rise
+
+                # Temperature coefficient is %/°C, convert to decimal
+                temp_diff = panel_temperature - STC_TEMPERATURE
+                temp_correction = 1.0 + (
+                    array.temperature_coefficient / 100.0 * temp_diff
+                )
+                power *= temp_correction
+
             # Debug logging
-            _LOGGER.debug(
-                "Array %s: GHI=%.2f W/m², zenith=%.1f°, azimuth=%.1f°, AOI=%.1f°, POA=%.2f W/m², power=%.2f W",
-                array.name,
-                solar_radiation,
-                solar_zenith,
-                solar_azimuth,
-                aoi,
-                poa_global,
-                power,
-            )
+            if panel_temperature is not None:
+                _LOGGER.debug(
+                    "Array %s: GHI=%.2f W/m², zenith=%.1f°, azimuth=%.1f°, AOI=%.1f°, POA=%.2f W/m², air=%.1f°C, panel=%.1f°C, temp_corr=%.3f, power=%.2f W",
+                    array.name,
+                    solar_radiation,
+                    solar_zenith,
+                    solar_azimuth,
+                    aoi,
+                    poa_global,
+                    temperature,
+                    panel_temperature,
+                    temp_correction,
+                    power,
+                )
+            else:
+                _LOGGER.debug(
+                    "Array %s: GHI=%.2f W/m², zenith=%.1f°, azimuth=%.1f°, AOI=%.1f°, POA=%.2f W/m², power=%.2f W",
+                    array.name,
+                    solar_radiation,
+                    solar_zenith,
+                    solar_azimuth,
+                    aoi,
+                    poa_global,
+                    power,
+                )
 
             return max(0.0, power)
 
