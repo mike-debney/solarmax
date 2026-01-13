@@ -155,15 +155,20 @@ class SolarMaxCoordinator(DataUpdateCoordinator[dict[str, float]]):
                 solar_azimuth=solar_azimuth,
             )
 
-            # Estimate DNI and DHI from GHI (simplified decomposition)
+            # Estimate DNI and DHI from GHI using pvlib's Erbs decomposition model
             # For better accuracy, use actual DNI/DHI sensors if available
-            # This uses Erbs model approximation
-            cos_zenith = max(0, pvlib.tools.cosd(solar_zenith))
-            if cos_zenith > 0.01:  # Sun is above horizon
-                # Rough estimate: DNI = GHI * cos(zenith), DHI = 15% of GHI
-                # This is a simplification; proper models use clearness index
-                dni = solar_radiation * cos_zenith
-                dhi = solar_radiation * 0.15
+            if solar_zenith < 87:  # Sun is meaningfully above horizon
+                day_of_year = now.timetuple().tm_yday
+
+                # Use Erbs model to decompose GHI into DNI and DHI
+                erbs_result = pvlib.irradiance.erbs(
+                    ghi=solar_radiation,
+                    zenith=solar_zenith,
+                    datetime_or_doy=day_of_year,
+                )
+                # Extract scalar values from result
+                dni = float(erbs_result["dni"].iloc[0]) if hasattr(erbs_result["dni"], "iloc") else float(erbs_result["dni"])
+                dhi = float(erbs_result["dhi"].iloc[0]) if hasattr(erbs_result["dhi"], "iloc") else float(erbs_result["dhi"])
             else:
                 dni = 0.0
                 dhi = solar_radiation
